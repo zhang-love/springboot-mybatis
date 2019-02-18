@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zl.springbootmybatis.dao.TestDao">
+    <!--
+    <select
+        id="selectPerson" 唯一标识符<->dao层方法名
+        parameterType="int" 参数类型-可有可无，mybatis可以自动识别
+        resultType="hashmap" 返回值类型->返回一条或多条数据都可以用对象的完全限定名
+        resultMap="personResultMap" 返回map，不能与resultType同时使用
+        flushCache="false" true时，语句被调用时会清空本地缓存
+        useCache="true" true时，语句执行结果被二级缓存
+        timeout="10000" 等待时间
+        fetchSize="256"
+        statementType="PREPARED"
+        resultSetType="FORWARD_ONLY" 用于多结果集>
+    <insert
+      id="insertAuthor"
+      parameterType="domain.blog.Author"
+      flushCache="true"
+      statementType="PREPARED"
+      keyProperty=""
+      keyColumn=""
+      useGeneratedKeys=""
+      timeout="20">
+
+    <update
+      id="updateAuthor"
+      parameterType="domain.blog.Author"
+      flushCache="true"
+      statementType="PREPARED"
+      timeout="20">
+
+    <delete
+      id="deleteAuthor"
+      parameterType="domain.blog.Author"
+      flushCache="true"
+      statementType="PREPARED"
+      timeout="20">
+    -->
+    <select id="getUser" resultType="com.zl.springbootmybatis.entity.User">
+      select * from sys_user where id = #{id}
+    </select>
+    <select id="getUser2" resultType="com.zl.springbootmybatis.entity.User">
+      select * from sys_user where username=#{username}
+    </select>
+<!--#{}和${}的区别：#{}是预编译处理，会把参数部分用占位符?代替，值的替换发生在DBMS，${}是字符串替换，会直接将参数部分替换成值
+    ${}会导致sql注入的问题：参数比较复杂的时候会产生问题,一般使用#{}
+-->
+    <select id="getUsers" resultType="User">
+      select * from sys_user order by grade
+    </select>
+<!--insert单行插入，返回值为插入的条数1-->
+    <insert id="insertUser" >
+        insert into sys_user(username,password) values (#{username},#{password})
+    </insert>
+<!-- insert 多行插入 ，返回值为插入的条数  -->
+    <insert id="insertUsers">
+        insert into sys_user(username,password) values
+        <foreach collection="list" item = "item" separator=",">
+            (#{item.username},#{item.password})
+        </foreach>
+    </insert>
+<!--测试update用法-->
+    <update id="updateUser">
+        update sys_user set password = "1123" where id =  #{id}
+    </update>
+<!--测试delete操作-->
+    <delete id="deleteUser">
+        delete from sys_user where id =#{id}
+    </delete>
+<!--测试驼峰命名法，需要在mybatis-config文件中配置mapUnderscoreToCamelCase为true-->
+    <select id="test" resultType="test">
+        select * from test
+    </select>
+<!--测试resultMap的使用，可以将不同的表，不同的列映射到某个实体中
+    属性constructor:注入结果到构造方法中(idArg:id参数；arg:注入到普通结果)
+    id：一个ID结果
+    result：注入到字段
+    association：一个复杂类型
+    collection：一个复杂的集合-->
+    <resultMap id="userResultMap" type="User">
+        <result property="username" column="user_name"/>
+        <result property="password" column="hash_password"/>
+    </resultMap>
+    <select id="selectUser" resultMap="userResultMap">
+        select user_name,hash_password from some_table
+    </select>
+<!--关联的嵌套查询一对一,一个Blog有一个Author，通过id标识可以很快的将两者关联起来-->
+    <!--<resultMap id="BlogResult" type="Blog">
+        <id property="id" column="blog_id"/>
+        <result property="title" column="blog_title"/>
+        <association property="author" column="blog_author_id" resultMap="authorResult"/>
+    </resultMap>
+    <resultMap id="authorResult" type="Author">
+        <id property="id" column="author_id"/>
+        <result property="username" column="author_username"/>
+        <result property="password" column="author_password"/>
+        <result property="email" column="author_email"/>
+    </resultMap>-->
+    <select id="selectBlog" resultMap="BlogResult">
+        select
+          B.id as blog_id,
+          B.title as blog_title,
+          B.author_id as blog_author_id,
+          A.id as author_id,
+          A.username as author_username,
+          A.password as author_password,
+          A.email as author_email
+        from Blog B left join Author A on B.author_id=A.id where B.id=#{id}
+    </select>
+    <!--resultMap可以用这种写法，直接将关联对象在里面-->
+    <resultMap id="BlogResult" type="Blog">
+        <id property="id" column="blog_id"/>
+        <result property="title" column="blog_title"/>
+        <association property="author">
+            <id property="id" column="author_id"/>
+            <result property="username" column="author_username"/>
+            <result property="password" column="author_password"/>
+            <result property="email" column="author_email"/>
+        </association>
+    </resultMap>
+<!--集合的关联查询，查询一对多个关系，相比于association多了一个ofType属性，
+指定集合中的对象类型,autoMapping可以开启相同属性自动映射-->
+    <select id="selectAuthor" resultMap="authorResult">
+        select
+        A.id as author_id,
+        A.username as author_username,
+        password,
+        email,
+        B.id as fans_id,
+        B.username as fans_username
+         from author A left join author_fans C on A.id = C.author_id
+         left join fans B on C.fans_id = B.id
+         where A.id=#{id}
+    </select>
+    <resultMap id="authorResult" type="Author" autoMapping="true">
+        <id property="id" column="author_id"/>
+        <result property="username" column="author_username"/>
+        <collection property="fans" ofType="Fans">
+            <id property="id" column="fans_id"/>
+            <result property="username" column="fans_username"/>
+        </collection>
+    </resultMap>
+<!--动态SQL,if动态添加查询条件-->
+    <select id="findUser" resultType="User">
+        select * from sys_user
+        <if test="grade != null">
+            where grade >#{grade}
+        </if>
+    </select>
+    <!--动态SQL，choose when otherwise满足哪个条件就按哪个条件查找-->
+    <select id="findUser2" resultType="User">
+        select * from sys_user
+        <choose>
+            <when test="username != null">
+                where username = #{username}
+            </when>
+            <when test="grade != null">
+                where grade>#{grade}
+            </when>
+            <otherwise>
+                where id = 1
+            </otherwise>
+        </choose>
+    </select>
+    <!--动态SQL，trim，where，set
+    where可以在有条件的时候自动添加进sql，可以自动去除and|or
+    set可以去除多余的逗号
+    trim可以指定where或者set的操作
+    -->
+    <select id="findUser3" resultType="User">
+        select * from sys_user
+        <where>
+            <if test="grade != null">
+                grade >#{grade}
+            </if>
+            <if test="username != null">
+                and username = #{username}
+            </if>
+        </where>
+    </select>
+    <select id ="findUser4" resultType="User">
+        select * from sys_user
+        <trim prefix="where" prefixOverrides="and|or">
+            <if test="grade != null">
+                grade >#{grade}
+            </if>
+            <if test="username != null">
+                and username=#{username}
+            </if>
+        </trim>
+    </select>
+    <update id="updateUser2">
+        update sys_user
+        <set>
+            <if test="username != null">
+                username =#{username},
+            </if>
+            <if test ="password != null">
+               password = #{password}
+            </if>
+        </set>
+        where id=#{id}
+    </update>
+    <update id="updateUser3">
+        update sys_user
+        <trim prefix="set" suffixOverrides=",">
+            <if test="username != null">
+                username =#{username},
+            </if>
+            <if test ="password != null">
+                password = #{password}
+            </if>
+        </trim>
+        where id =#{id}
+    </update>
+    <select id="findUser5" resultType="User">
+        select * from sys_user where id in
+        <foreach collection="list" item="item" index="index" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+</mapper>
