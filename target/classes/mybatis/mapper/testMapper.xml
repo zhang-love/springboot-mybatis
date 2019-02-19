@@ -216,10 +216,12 @@
         </trim>
         where id =#{id}
     </update>
+<!--动态SQL，foreach遍历集合-->
     <select id="findUser5" resultType="User">
         select * from sys_user where id in
         <foreach collection="list" item="item" index="index" open="(" separator="," close=")">
             #{item}
         </foreach>
     </select>
+
 </mapper>
